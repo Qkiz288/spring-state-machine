@@ -2,8 +2,11 @@ package com.kkukielka.statemachine.config;
 
 import com.kkukielka.statemachine.domain.PaymentEvent;
 import com.kkukielka.statemachine.domain.PaymentState;
+import com.kkukielka.statemachine.services.PaymentServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.statemachine.action.Action;
 import org.springframework.statemachine.config.EnableStateMachineFactory;
 import org.springframework.statemachine.config.StateMachineConfigurerAdapter;
 import org.springframework.statemachine.config.builders.StateMachineConfigurationConfigurer;
@@ -13,6 +16,7 @@ import org.springframework.statemachine.listener.StateMachineListenerAdapter;
 import org.springframework.statemachine.state.State;
 
 import java.util.EnumSet;
+import java.util.Random;
 
 import static com.kkukielka.statemachine.domain.PaymentEvent.*;
 import static com.kkukielka.statemachine.domain.PaymentState.*;
@@ -35,6 +39,7 @@ public class StateMachineConfig extends StateMachineConfigurerAdapter<PaymentSta
     @Override
     public void configure(StateMachineTransitionConfigurer<PaymentState, PaymentEvent> transitions) throws Exception {
         transitions.withExternal().source(NEW).target(NEW).event(PRE_AUTHORIZE)
+                    .action(preAuthAction())
                 .and()
                 .withExternal().source(NEW).target(PRE_AUTH).event(PRE_AUTH_APPROVED)
                 .and()
@@ -50,5 +55,25 @@ public class StateMachineConfig extends StateMachineConfigurerAdapter<PaymentSta
             }
         };
         config.withConfiguration().listener(adapter);
+    }
+
+    public Action<PaymentState, PaymentEvent> preAuthAction() {
+        return stateContext -> {
+            System.out.println("PreAuth was called");
+
+            if (new Random().nextInt(10) < 8) {
+                System.out.println("Approved!!");
+                stateContext.getStateMachine().sendEvent(MessageBuilder
+                        .withPayload(PRE_AUTH_APPROVED).setHeader(PaymentServiceImpl.PAYMENT_ID_HEADER,
+                        stateContext.getMessageHeader(PaymentServiceImpl.PAYMENT_ID_HEADER))
+                        .build());
+            } else {
+                System.out.println("Declined!!");
+                stateContext.getStateMachine().sendEvent(MessageBuilder
+                        .withPayload(PRE_AUTH_DECLINED).setHeader(PaymentServiceImpl.PAYMENT_ID_HEADER,
+                                stateContext.getMessageHeader(PaymentServiceImpl.PAYMENT_ID_HEADER))
+                        .build());
+            }
+        };
     }
 }
