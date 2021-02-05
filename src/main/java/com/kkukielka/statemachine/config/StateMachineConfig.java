@@ -43,7 +43,14 @@ public class StateMachineConfig extends StateMachineConfigurerAdapter<PaymentSta
                 .and()
                 .withExternal().source(NEW).target(PRE_AUTH).event(PRE_AUTH_APPROVED)
                 .and()
-                .withExternal().source(NEW).target(PRE_AUTH_ERROR).event(PRE_AUTH_DECLINED);
+                .withExternal().source(NEW).target(PRE_AUTH_ERROR).event(PRE_AUTH_DECLINED)
+                .and()
+                .withExternal().source(PRE_AUTH).target(PRE_AUTH).event(AUTHORIZE)
+                    .action(authAction())
+                .and()
+                .withExternal().source(PRE_AUTH).target(AUTH).event(AUTH_APPROVED)
+                .and()
+                .withExternal().source(PRE_AUTH).target(AUTH_ERROR).event(AUTH_DECLINED);
     }
 
     @Override
@@ -71,6 +78,26 @@ public class StateMachineConfig extends StateMachineConfigurerAdapter<PaymentSta
                 System.out.println("Declined!!");
                 stateContext.getStateMachine().sendEvent(MessageBuilder
                         .withPayload(PRE_AUTH_DECLINED).setHeader(PaymentServiceImpl.PAYMENT_ID_HEADER,
+                                stateContext.getMessageHeader(PaymentServiceImpl.PAYMENT_ID_HEADER))
+                        .build());
+            }
+        };
+    }
+
+    public Action<PaymentState, PaymentEvent> authAction() {
+        return stateContext -> {
+            System.out.println("Auth was called");
+
+            if (new Random().nextInt(10) < 8) {
+                System.out.println("Authorized!!");
+                stateContext.getStateMachine().sendEvent(MessageBuilder
+                        .withPayload(AUTH_APPROVED).setHeader(PaymentServiceImpl.PAYMENT_ID_HEADER,
+                                stateContext.getMessageHeader(PaymentServiceImpl.PAYMENT_ID_HEADER))
+                        .build());
+            } else {
+                System.out.println("Not Authorized!!");
+                stateContext.getStateMachine().sendEvent(MessageBuilder
+                        .withPayload(AUTH_DECLINED).setHeader(PaymentServiceImpl.PAYMENT_ID_HEADER,
                                 stateContext.getMessageHeader(PaymentServiceImpl.PAYMENT_ID_HEADER))
                         .build());
             }

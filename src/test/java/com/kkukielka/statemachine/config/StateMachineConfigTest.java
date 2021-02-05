@@ -2,6 +2,7 @@ package com.kkukielka.statemachine.config;
 
 import com.kkukielka.statemachine.domain.PaymentEvent;
 import com.kkukielka.statemachine.domain.PaymentState;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,6 +20,7 @@ class StateMachineConfigTest {
     StateMachineFactory<PaymentState, PaymentEvent> factory;
 
     @Test
+    @Disabled
     public void testNewStateMachine() {
         StateMachine<PaymentState, PaymentEvent> stateMachine = factory.getStateMachine(UUID.randomUUID());
 

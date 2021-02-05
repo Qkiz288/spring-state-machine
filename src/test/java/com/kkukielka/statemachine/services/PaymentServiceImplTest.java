@@ -5,6 +5,7 @@ import com.kkukielka.statemachine.domain.PaymentEvent;
 import com.kkukielka.statemachine.domain.PaymentState;
 import com.kkukielka.statemachine.repository.PaymentRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -48,5 +49,24 @@ class PaymentServiceImplTest {
         assertEquals(savedPayment.getAmount(), preAuthPayment.getAmount());
         assertTrue(savedPayment.getState().equals(PaymentState.PRE_AUTH)
                 || savedPayment.getState().equals(PaymentState.PRE_AUTH_ERROR));
+    }
+
+    @Transactional
+    @RepeatedTest(10)
+    void authTest() {
+        Payment savedPayment = paymentService.newPayment(payment);
+
+        StateMachine<PaymentState, PaymentEvent> stateMachine = paymentService.preAuth(savedPayment.getId());
+
+        Payment preAuthPayment = paymentRepository.getOne(savedPayment.getId());
+
+        if (stateMachine.getState().getId() == PaymentState.PRE_AUTH) {
+            StateMachine<PaymentState, PaymentEvent> authorizedSM = paymentService.authorizePayment(payment.getId());
+
+            assertTrue(authorizedSM.getState().getId() == PaymentState.AUTH
+            || authorizedSM.getState().getId() == PaymentState.AUTH_ERROR);
+        } else {
+            assertEquals(stateMachine.getState().getId(), PaymentState.PRE_AUTH_ERROR);
+        }
     }
 }
